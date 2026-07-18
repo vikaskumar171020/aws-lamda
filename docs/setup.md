@@ -54,6 +54,12 @@ To run the Jest test suite:
 npm test
 ```
 
+To run the tests with code coverage analysis (enforcing at least **80% function coverage** for functions to pass the build):
+
+```bash
+npm run test:coverage
+```
+
 ---
 
 ## 5. TypeScript Check

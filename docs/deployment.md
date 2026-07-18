@@ -36,9 +36,17 @@ sam deploy
 
 ## CI/CD Pipeline
 
-To automate deployments, you can set up a GitHub Actions workflow or AWS CodePipeline. A typical deployment job requires:
-1. Installing Node.js dependencies
-2. Setting up AWS Credentials (`aws-actions/configure-aws-credentials`)
-3. Installing AWS SAM CLI
-4. Running `sam build`
-5. Running `sam deploy --no-confirm-changeset --no-fail-on-empty-changeset`
+A GitHub Actions workflow has been configured at [.github/workflows/ci.yml](file:///Volumes/MacDisk/AWS/aws-lamda/.github/workflows/ci.yml).
+
+### Workflow Design
+- **Validation**: Triggered on all `pull_request` events to `main` or `master`. It performs:
+  1. Repository Checkout.
+  2. Node.js Environment Setup.
+  3. Clean Dependency Installation (`npm ci`).
+  4. TypeScript Type Checking (`npm run type-check`).
+  5. Jest Unit Testing (`npm test`).
+- **Deployment**: Triggered on `push` events (e.g., when a pull request is merged) to `main` or `master`. Currently, this contains placeholder steps that can be uncommented and configured with:
+  1. AWS Credentials Configuration using GitHub secrets (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`).
+  2. AWS SAM CLI Setup.
+  3. Running `sam build` and `sam deploy`.
+
