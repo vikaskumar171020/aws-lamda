@@ -52,5 +52,23 @@ A GitHub Actions workflow has been configured at [.github/workflows/ci.yml](file
   4. **Artifact Archiving**: Zips the compiled build folder (`.aws-sam/`), `template.yaml`, and `package.json` into `deploy-package.zip`.
   5. **Upload Artifact**: Attaches `deploy-package.zip` as a run artifact (`sam-deploy-package`) to the GitHub Action run.
   6. **Transactional Deploy & Auto-Rollback**: Deploys the application using `sam deploy`. If the deployment fails for any reason (e.g., syntax errors, network errors, AWS validation failures), AWS CloudFormation natively triggers a transactional rollback, returning all resources back to the state of the **last successful deployment**.
+---
 
+## AWS OIDC Configuration (GitHub Actions Integration)
 
+To allow GitHub Actions to securely assume an IAM Role on AWS without static secret keys:
+
+1. **Configure OIDC Identity Provider in AWS**:
+   - Go to **IAM** -> **Identity providers** -> **Add provider**.
+   - Provider type: **OpenID Connect**.
+   - Provider URL: `https://token.actions.githubusercontent.com`
+   - Audience: `sts.amazonaws.com`
+2. **Create IAM Role**:
+   - Go to **IAM** -> **Roles** -> **Create role**.
+   - Select trusted entity: **Web identity**.
+   - Identity provider: `token.actions.githubusercontent.com`
+   - Audience: `sts.amazonaws.com`
+   - Select your GitHub organization/username, repository name, and branch limits.
+   - Attach policies allowing CloudFormation execution, Lambda deployment, API Gateway configuration, and S3 access (e.g., Administrator access or custom SAM policy).
+3. **Configure GitHub Secret**:
+   - Add `AWS_ROLE_TO_ASSUME` repository secret containing the full ARN of the created IAM Role (e.g., `arn:aws:iam::123456789012:role/GithubActionsSAMDeployer`).
