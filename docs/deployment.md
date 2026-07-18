@@ -45,7 +45,7 @@ A GitHub Actions workflow has been configured at [.github/workflows/ci.yml](file
   3. Clean Dependency Installation (`npm ci`).
   4. TypeScript Type Checking (`npm run type-check`).
   5. Jest Unit Testing (`npm test`).
-- **Deployment**: Triggered on `push` events (e.g., when a pull request is merged) to `main` or `master`. It performs:
+- **Deployment**: Triggered on `push` events to `main` or `master` (e.g. when a PR is merged) or **manually run** via the GitHub Actions tab (`workflow_dispatch`). It performs:
   1. Node.js environment setup and dependency installation (`npm ci`).
   2. AWS SAM CLI and AWS Credentials configuration.
   3. Running `sam build` to compile the functions.
