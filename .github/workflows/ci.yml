@@ -237,4 +237,4 @@ jobs:
           # AWS CloudFormation natively implements transactional rollback.
           # If the deployment fails (e.g. Lambda creation error, template violation), 
           # AWS will automatically roll back the entire stack to the last successful deployment state.
-          sam deploy --no-confirm-changeset --no-fail-on-empty-changeset
+          sam deploy --stack-name aws-lambda-express-api --resolve-s3 --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
