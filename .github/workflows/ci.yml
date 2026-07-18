@@ -31,6 +31,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Add node_modules/.bin to PATH
+        run: echo "${{ github.workspace }}/node_modules/.bin" >> $GITHUB_PATH
+
       - name: Run TypeScript type-check
         id: type_check
         run: npm run type-check 2>&1 | tee typecheck.log
@@ -199,6 +202,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Add node_modules/.bin to PATH
+        run: echo "${{ github.workspace }}/node_modules/.bin" >> $GITHUB_PATH
 
       - name: Setup AWS SAM CLI
         uses: aws-actions/setup-sam@v2
