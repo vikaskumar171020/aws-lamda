@@ -45,8 +45,12 @@ A GitHub Actions workflow has been configured at [.github/workflows/ci.yml](file
   3. Clean Dependency Installation (`npm ci`).
   4. TypeScript Type Checking (`npm run type-check`).
   5. Jest Unit Testing (`npm test`).
-- **Deployment**: Triggered on `push` events (e.g., when a pull request is merged) to `main` or `master`. Currently, this contains placeholder steps that can be uncommented and configured with:
-  1. AWS Credentials Configuration using GitHub secrets (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`).
-  2. AWS SAM CLI Setup.
-  3. Running `sam build` and `sam deploy`.
+- **Deployment**: Triggered on `push` events to `main` or `master` (e.g. when a PR is merged) or **manually run** via the GitHub Actions tab (`workflow_dispatch`). It performs:
+  1. Node.js environment setup and dependency installation (`npm ci`).
+  2. AWS SAM CLI and AWS Credentials configuration.
+  3. Running `sam build` to compile the functions.
+  4. **Artifact Archiving**: Zips the compiled build folder (`.aws-sam/`), `template.yaml`, and `package.json` into `deploy-package.zip`.
+  5. **Upload Artifact**: Attaches `deploy-package.zip` as a run artifact (`sam-deploy-package`) to the GitHub Action run.
+  6. **Transactional Deploy & Auto-Rollback**: Deploys the application using `sam deploy`. If the deployment fails for any reason (e.g., syntax errors, network errors, AWS validation failures), AWS CloudFormation natively triggers a transactional rollback, returning all resources back to the state of the **last successful deployment**.
+
 
