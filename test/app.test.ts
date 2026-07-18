@@ -1,5 +1,5 @@
 import request from 'supertest';
-import app from '../src/app.js';
+import app from '../src/app';
 
 describe('Express Application Routes', () => {
   it('should return API status and message on GET /', async () => {

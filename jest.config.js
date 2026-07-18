@@ -6,5 +6,13 @@ module.exports = {
   forceExit: true,
   clearMocks: true,
   resetMocks: true,
-  restoreMocks: true,
+  collectCoverageFrom: [
+    'src/**/*.ts',
+    '!src/handlers/api.ts'
+  ],
+  coverageThreshold: {
+    global: {
+      functions: 80
+    }
+  }
 };

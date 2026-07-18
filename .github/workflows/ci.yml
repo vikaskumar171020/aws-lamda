@@ -26,10 +26,12 @@ jobs:
         run: npm ci
 
       - name: Run TypeScript type-check
-        run: npm run type-check
+        id: type_check
+        run: npm run type-check 2>&1 | tee typecheck.log
 
-      - name: Run unit tests
-        run: npm test
+      - name: Run unit tests and verify coverage
+        id: test_coverage
+        run: npm run test:coverage 2>&1 | tee test.log
 
       - name: Setup AWS SAM CLI
         uses: aws-actions/setup-sam@v2
@@ -37,7 +39,68 @@ jobs:
           use-installer: true
 
       - name: Run SAM Build
-        run: sam build
+        id: sam_build
+        run: sam build 2>&1 | tee sambuild.log
+
+      - name: Generate Validation Report
+        if: always()
+        run: |
+          echo "### 🚀 Validation Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check Type-check
+          if [ "${{ steps.type_check.outcome }}" = "success" ]; then
+            echo "- **TypeScript Check**: ✅ Success" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.type_check.outcome }}" = "failure" ]; then
+            echo "- **TypeScript Check**: ❌ Failed" >> $GITHUB_STEP_SUMMARY
+            if [ -f typecheck.log ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "<details><summary>🔍 View Type-check Error Logs</summary>" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+              cat typecheck.log >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+              echo "</details>" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- **TypeScript Check**: ⚠️ Skipped" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Check Test & Coverage
+          if [ "${{ steps.test_coverage.outcome }}" = "success" ]; then
+            echo "- **Unit Tests & Coverage**: ✅ Success" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.test_coverage.outcome }}" = "failure" ]; then
+            echo "- **Unit Tests & Coverage**: ❌ Failed" >> $GITHUB_STEP_SUMMARY
+            if [ -f test.log ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "<details><summary>🔍 View Test & Coverage Error Logs</summary>" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+              cat test.log >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+              echo "</details>" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- **Unit Tests & Coverage**: ⚠️ Skipped" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Check SAM Build
+          if [ "${{ steps.sam_build.outcome }}" = "success" ]; then
+            echo "- **AWS SAM Build**: ✅ Success" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.sam_build.outcome }}" = "failure" ]; then
+            echo "- **AWS SAM Build**: ❌ Failed" >> $GITHUB_STEP_SUMMARY
+            if [ -f sambuild.log ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "<details><summary>🔍 View SAM Build Error Logs</summary>" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+              cat sambuild.log >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+              echo "</details>" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- **AWS SAM Build**: ⚠️ Skipped" >> $GITHUB_STEP_SUMMARY
+          fi
 
   deploy:
     name: Deploy to AWS Lambda

@@ -8,6 +8,7 @@
     "local": "sam local start-api",
     "deploy": "sam deploy --guided",
     "test": "jest",
+    "test:coverage": "jest --coverage",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
