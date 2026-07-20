@@ -36,16 +36,15 @@ sam deploy
 
 ## CI/CD Pipeline
 
-A GitHub Actions workflow has been configured at [.github/workflows/ci.yml](file:///Volumes/MacDisk/AWS/aws-lamda/.github/workflows/ci.yml).
+The CI/CD process is divided into two separate GitHub Actions workflows:
 
-### Workflow Design
-- **Validation**: Triggered on all `pull_request` events to `main` or `master`. It performs:
+1. **Validation Workflow** ([.github/workflows/validate.yml](file:///Volumes/MacDisk/AWS/aws-lamda/.github/workflows/validate.yml)): Triggered automatically on all `pull_request` events to `main`. It performs:
   1. Repository Checkout.
   2. Node.js Environment Setup.
   3. Clean Dependency Installation (`npm ci`).
   4. TypeScript Type Checking (`npm run type-check`).
   5. Jest Unit Testing (`npm test`).
-- **Deployment**: Triggered **only manually** via the GitHub Actions tab (`workflow_dispatch`). When triggering, you choose from three version increment options: `Patch`, `Minor`, or `Major`. It performs:
+2. **Deployment Workflow** ([.github/workflows/deploy.yml](file:///Volumes/MacDisk/AWS/aws-lamda/.github/workflows/deploy.yml)): Triggered **only manually** via the GitHub Actions tab (`workflow_dispatch`). When triggering, you choose from three version increment options: `Patch`, `Minor`, or `Major`. It performs:
   1. **Versioning**: Parses the current version in `package.json`, bumps it according to your selection (`Patch`, `Minor`, or `Major`), and updates the version inside `package.json`.
   2. Node.js environment setup and dependency installation (`npm ci`).
   3. AWS SAM CLI and AWS Credentials configuration.

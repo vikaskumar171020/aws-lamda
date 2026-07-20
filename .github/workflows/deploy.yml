@@ -1,0 +1,160 @@
+name: Deployment Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Type of version bump (Major, Minor, Patch)'
+        required: true
+        default: 'Patch'
+        type: choice
+        options:
+          - Patch
+          - Minor
+          - Major
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  deploy:
+    name: Deploy to AWS Lambda
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Calculate Next Version
+        id: versioning
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let latestVersion = '1.0.0';
+            try {
+              const { data: latestRelease } = await github.rest.repos.getLatestRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+              });
+              const tag = latestRelease.tag_name;
+              console.log(`Latest release tag found on GitHub: ${tag}`);
+              const match = tag.match(/(\d+\.\d+\.\d+)/);
+              if (match) {
+                latestVersion = match[1];
+              }
+            } catch (error) {
+              console.log("No previous releases found or error querying GitHub API. Falling back to package.json version.");
+              const fs = require('fs');
+              const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+              latestVersion = pkg.version || '1.0.0';
+            }
+            
+            const releaseType = '${{ inputs.release_type }}'.toLowerCase();
+            let [major, minor, patch] = latestVersion.split('.').map(Number);
+            
+            if (releaseType === 'major') {
+              major += 1;
+              minor = 0;
+              patch = 0;
+            } else if (releaseType === 'minor') {
+              minor += 1;
+              patch = 0;
+            } else if (releaseType === 'patch') {
+              patch += 1;
+            }
+            
+            const nextVersion = `${major}.${minor}.${patch}`;
+            core.setOutput('version', nextVersion);
+            
+            // Stamp the incremented version in package.json for building/zipping
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = nextVersion;
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2), 'utf8');
+            console.log(`Version base: ${latestVersion} -> Bumped to: ${nextVersion} (${releaseType})`);
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Add node_modules/.bin to PATH
+        run: echo "${{ github.workspace }}/node_modules/.bin" >> $GITHUB_PATH
+
+      - name: Setup AWS SAM CLI
+        uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: us-east-1 # Change to your region (or use ${{ secrets.AWS_REGION }})
+          audience: sts.amazonaws.com
+
+      - name: SAM Build
+        run: sam build
+
+      - name: Archive build artifacts to (.zip)
+        run: |
+          zip -r aws-v${{ steps.versioning.outputs.version }}.zip .aws-sam/ template.yaml package.json
+
+      - name: Upload Deployment Package to Job Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: aws-v${{ steps.versioning.outputs.version }}
+          path: aws-v${{ steps.versioning.outputs.version }}.zip
+          retention-days: 7
+
+      - name: SAM Deploy
+        run: |
+          # 1. Check if stack exists and has a physical API Gateway ID associated
+          API_ID=$(aws cloudformation describe-stack-resource --stack-name aws-lambda-express-api --logical-resource-id ServerlessRestApi --query "StackResourceDetail.PhysicalResourceId" --output text --region us-east-1 2>/dev/null || echo "")
+          
+          if [ -n "$API_ID" ] && [ "$API_ID" != "None" ]; then
+            echo "Checking status of API Gateway $API_ID..."
+            # 2. Check if API Gateway exists on AWS. If not (returns error), delete the drifted stack to rebuild it
+            if ! aws apigateway get-rest-api --rest-api-id "$API_ID" --region us-east-1 >/dev/null 2>&1; then
+              echo "⚠️ WARNING: API Gateway $API_ID was manually deleted (drifted state)."
+              echo "Deleting the drifted CloudFormation stack to trigger clean recreation..."
+              aws cloudformation delete-stack --stack-name aws-lambda-express-api --region us-east-1
+              echo "Waiting for stack deletion to complete..."
+              aws cloudformation wait stack-delete-complete --stack-name aws-lambda-express-api --region us-east-1
+              echo "Stack deleted. Recreating infrastructure..."
+            else
+              echo "API Gateway $API_ID is active and healthy."
+            fi
+          fi
+
+          # 3. Proceed with standard SAM deploy
+          # AWS CloudFormation natively implements transactional rollback.
+          # If the deployment fails (e.g. Lambda creation error, template violation), 
+          # AWS will automatically roll back the entire stack to the last successful deployment state.
+          sam deploy --stack-name aws-lambda-express-api --resolve-s3 --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
+
+          # 4. Clean up the S3 deployment bucket to save storage costs
+          S3_BUCKET=$(aws cloudformation describe-stacks --stack-name aws-sam-cli-managed-default --query "Stacks[0].Outputs[?OutputKey=='SourceBucket'].OutputValue" --output text --region us-east-1 2>/dev/null || echo "")
+          if [ -n "$S3_BUCKET" ] && [ "$S3_BUCKET" != "None" ]; then
+            echo "Cleaning up S3 deployment bucket s3://$S3_BUCKET..."
+            aws s3 rm "s3://$S3_BUCKET" --recursive --region us-east-1
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: aws-v${{ steps.versioning.outputs.version }}.zip
+          tag_name: aws-v${{ steps.versioning.outputs.version }}
+          name: Release aws-v${{ steps.versioning.outputs.version }}
+          body: |
+            AWS Lambda deployment package successfully created and deployed.
+            
+            **Version**: `aws-v${{ steps.versioning.outputs.version }}`
+            **Stack**: `aws-lambda-express-api`
+            **Region**: `us-east-1`
+            **Git Commit**: ${{ github.sha }}
