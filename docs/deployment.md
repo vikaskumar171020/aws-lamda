@@ -45,13 +45,15 @@ A GitHub Actions workflow has been configured at [.github/workflows/ci.yml](file
   3. Clean Dependency Installation (`npm ci`).
   4. TypeScript Type Checking (`npm run type-check`).
   5. Jest Unit Testing (`npm test`).
-- **Deployment**: Triggered on `push` events to `main` or `master` (e.g. when a PR is merged) or **manually run** via the GitHub Actions tab (`workflow_dispatch`). It performs:
-  1. Node.js environment setup and dependency installation (`npm ci`).
-  2. AWS SAM CLI and AWS Credentials configuration.
-  3. Running `sam build` to compile the functions.
-  4. **Artifact Archiving**: Zips the compiled build folder (`.aws-sam/`), `template.yaml`, and `package.json` into `deploy-package.zip`.
-  5. **Upload Artifact**: Attaches `deploy-package.zip` as a run artifact (`sam-deploy-package`) to the GitHub Action run.
-  6. **Transactional Deploy & Auto-Rollback**: Deploys the application using `sam deploy`. If the deployment fails for any reason (e.g., syntax errors, network errors, AWS validation failures), AWS CloudFormation natively triggers a transactional rollback, returning all resources back to the state of the **last successful deployment**.
+- **Deployment**: Triggered **only manually** via the GitHub Actions tab (`workflow_dispatch`). When triggering, you choose from three version increment options: `Patch`, `Minor`, or `Major`. It performs:
+  1. **Versioning**: Parses the current version in `package.json`, bumps it according to your selection (`Patch`, `Minor`, or `Major`), and updates the version inside `package.json`.
+  2. Node.js environment setup and dependency installation (`npm ci`).
+  3. AWS SAM CLI and AWS Credentials configuration.
+  4. Running `sam build` to compile the functions.
+  5. **Artifact Archiving**: Zips the compiled build folder (`.aws-sam/`), `template.yaml`, and the updated `package.json` into `aws-v{version}.zip`.
+  6. **Upload Artifact**: Attaches the zip as a run artifact named `aws-v{version}` (e.g., `aws-v1.0.1`) to the GitHub Actions run.
+  7. **Transactional Deploy & Auto-Rollback**: Deploys the application using `sam deploy`. If the deployment fails for any reason (e.g., syntax errors, network errors, AWS validation failures), AWS CloudFormation natively triggers a transactional rollback, returning all resources back to the state of the **last successful deployment**.
+  8. **Create GitHub Release**: Creates a new GitHub Release tagged with the version (e.g., `aws-v1.0.1`) and attaches the `aws-v{version}.zip` package as a release asset.
 ---
 
 ## AWS OIDC Configuration (GitHub Actions Integration)

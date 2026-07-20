@@ -4,15 +4,22 @@ on:
   pull_request:
     branches:
       - main
-  push:
-    branches:
-      - main
   workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Type of version bump (Major, Minor, Patch)'
+        required: true
+        default: 'Patch'
+        type: choice
+        options:
+          - Patch
+          - Minor
+          - Major
 
 permissions:
   id-token: write
   pull-requests: write
-  contents: read
+  contents: write
 
 jobs:
   validate:
@@ -188,11 +195,42 @@ jobs:
   deploy:
     name: Deploy to AWS Lambda
     needs: validate
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Calculate Next Version
+        id: versioning
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            const currentVersion = pkg.version;
+            const releaseType = '${{ inputs.release_type }}'.toLowerCase();
+            
+            let [major, minor, patch] = currentVersion.split('.').map(Number);
+            
+            if (releaseType === 'major') {
+              major += 1;
+              minor = 0;
+              patch = 0;
+            } else if (releaseType === 'minor') {
+              minor += 1;
+              patch = 0;
+            } else if (releaseType === 'patch') {
+              patch += 1;
+            }
+            
+            const nextVersion = `${major}.${minor}.${patch}`;
+            core.setOutput('version', nextVersion);
+            
+            // Stamp the incremented version in package.json for building/zipping
+            pkg.version = nextVersion;
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2), 'utf8');
+            console.log(`Current version: ${currentVersion} -> Bumped to: ${nextVersion}`);
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -223,13 +261,13 @@ jobs:
 
       - name: Archive build artifacts to (.zip)
         run: |
-          zip -r deploy-package.zip .aws-sam/ template.yaml package.json
+          zip -r aws-v${{ steps.versioning.outputs.version }}.zip .aws-sam/ template.yaml package.json
 
       - name: Upload Deployment Package to Job Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: sam-deploy-package
-          path: deploy-package.zip
+          name: aws-v${{ steps.versioning.outputs.version }}
+          path: aws-v${{ steps.versioning.outputs.version }}.zip
           retention-days: 7
 
       - name: SAM Deploy
@@ -238,3 +276,17 @@ jobs:
           # If the deployment fails (e.g. Lambda creation error, template violation), 
           # AWS will automatically roll back the entire stack to the last successful deployment state.
           sam deploy --stack-name aws-lambda-express-api --resolve-s3 --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: aws-v${{ steps.versioning.outputs.version }}.zip
+          tag_name: aws-v${{ steps.versioning.outputs.version }}
+          name: Release aws-v${{ steps.versioning.outputs.version }}
+          body: |
+            AWS Lambda deployment package successfully created and deployed.
+            
+            **Version**: `aws-v${{ steps.versioning.outputs.version }}`
+            **Stack**: `aws-lambda-express-api`
+            **Region**: `us-east-1`
+            **Git Commit**: ${{ github.sha }}
