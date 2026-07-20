@@ -57,6 +57,7 @@ Open `http://127.0.0.1:3000` to interact with your Express app running inside a 
 ---
 
 ## Documentation Links
+- Telemetry & Cost Dashboard (GitHub Pages): [https://vikaskumar171020.github.io/aws-lamda/](https://vikaskumar171020.github.io/aws-lamda/)
 - Detailed architecture: [docs/architecture.md](file:///Volumes/MacDisk/AWS/aws-lamda/docs/architecture.md)
 - Development setup guide: [docs/setup.md](file:///Volumes/MacDisk/AWS/aws-lamda/docs/setup.md)
 - Deployment instructions: [docs/deployment.md](file:///Volumes/MacDisk/AWS/aws-lamda/docs/deployment.md)

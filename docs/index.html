@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Telemetry dashboard and optimization insights for the AWS Lambda Express API with TypeScript. Analyze cold starts, calculate monthly costs, and simulate API queries.">
+  <meta name="keywords" content="AWS Lambda, Express.js, TypeScript, CloudWatch, Serverless, Cost Calculator, Logs Insights, Telemetry, Observability">
+  <meta name="author" content="Vikas Kumar">
+  <title>Lambda Observability: Total & Insight Dashboard</title>
+  
+  <!-- Modern Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* CSS custom properties for theme and styling tokens */
+    :root {
+      --bg-base: #020617;
+      --bg-surface: rgba(15, 23, 42, 0.6);
+      --bg-surface-hover: rgba(30, 41, 59, 0.8);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-color-active: rgba(14, 165, 233, 0.4);
+      
+      /* Tailored HSL color system */
+      --primary-hsl: 199, 89%, 48%; /* #0ea5e9 Cyan */
+      --primary: hsl(var(--primary-hsl));
+      --primary-glow: rgba(14, 165, 233, 0.15);
+      
+      --success-hsl: 142, 71%, 45%; /* #10b981 Emerald */
+      --success: hsl(var(--success-hsl));
+      --success-glow: rgba(16, 185, 129, 0.15);
+      
+      --warning-hsl: 262, 83%, 58%; /* #8b5cf6 Violet */
+      --warning: hsl(var(--warning-hsl));
+      --warning-glow: rgba(139, 92, 246, 0.15);
+      
+      --danger-hsl: 346, 87%, 57%; /* #f43f5e Rose */
+      --danger: hsl(var(--danger-hsl));
+      
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      
+      --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: 'Outfit', sans-serif;
+      line-height: 1.5;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(14, 165, 233, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.05) 0%, transparent 40%);
+      background-attachment: fixed;
+    }
+
+    /* Scrollbar customization */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-base);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Layout structure */
+    header {
+      background: rgba(2, 6, 23, 0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 1rem 2rem;
+    }
+
+    .header-container {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 700;
+      font-size: 1.25rem;
+      letter-spacing: -0.025em;
+      color: var(--text-main);
+      text-decoration: none;
+    }
+
+    .logo span {
+      background: linear-gradient(135deg, var(--primary), var(--warning));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo svg {
+      width: 28px;
+      height: 28px;
+      fill: none;
+      stroke: var(--primary);
+      stroke-width: 2;
+    }
+
+    nav {
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    .nav-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: var(--transition-fast);
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.375rem;
+    }
+
+    .nav-link:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .btn-github {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: var(--transition-fast);
+    }
+
+    .btn-github:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+
+    main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 2.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 3rem;
+    }
+
+    /* Hero section */
+    .hero {
+      text-align: center;
+      padding: 2rem 0 3rem;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--primary-glow);
+      color: var(--primary);
+      border: 1px solid rgba(14, 165, 233, 0.2);
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.025em;
+      text-transform: uppercase;
+      animation: pulse 3s infinite;
+    }
+
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.04em;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #ffffff 40%, var(--text-muted) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Glassmorphic cards & container */
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      letter-spacing: -0.02em;
+    }
+
+    .section-title svg {
+      width: 24px;
+      height: 24px;
+      stroke-width: 2.5;
+    }
+
+    .grid-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 1024px) {
+      .grid-metrics {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    .card-metric {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      transition: var(--transition-normal);
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .card-metric::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: transparent;
+      transition: var(--transition-normal);
+    }
+
+    .card-metric.primary::before { background: var(--primary); }
+    .card-metric.success::before { background: var(--success); }
+    .card-metric.warning::before { background: var(--warning); }
+    .card-metric.danger::before { background: var(--danger); }
+
+    .card-metric:hover {
+      transform: translateY(-3px);
+      border-color: rgba(255, 255, 255, 0.15);
+      background: var(--bg-surface-hover);
+      box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+
+    .metric-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .metric-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .metric-icon {
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .primary .metric-icon { background: var(--primary-glow); color: var(--primary); }
+    .success .metric-icon { background: var(--success-glow); color: var(--success); }
+    .warning .metric-icon { background: var(--warning-glow); color: var(--warning); }
+    .danger .metric-icon { background: rgba(244, 63, 94, 0.15); color: var(--danger); }
+
+    .metric-value {
+      font-size: 2.25rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+
+    .metric-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* Core grid content layout */
+    .dashboard-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+
+    @media (min-width: 1024px) {
+      .dashboard-layout {
+        grid-template-columns: 1.2fr 0.8fr;
+      }
+    }
+
+    .panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 1rem;
+      padding: 1.75rem;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* Interactive Simulator Terminal */
+    .terminal-container {
+      background: #020617;
+      border: 1px solid #1e293b;
+      border-radius: 0.75rem;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 380px;
+    }
+
+    .terminal-header {
+      background: #0f172a;
+      border-bottom: 1px solid #1e293b;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .terminal-dots {
+      display: flex;
+      gap: 0.35rem;
+    }
+
+    .terminal-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .dot-red { background: #ef4444; }
+    .dot-yellow { background: #f59e0b; }
+    .dot-green { background: #10b981; }
+
+    .terminal-title {
+      font-family: 'Fira Code', monospace;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .terminal-body {
+      padding: 1rem;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.825rem;
+      color: #e2e8f0;
+      overflow-y: auto;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      scroll-behavior: smooth;
+    }
+
+    .log-line {
+      line-height: 1.4;
+      animation: fadeIn 0.15s ease-out;
+      white-space: pre-wrap;
+    }
+
+    .log-start { color: var(--primary); }
+    .log-end { color: var(--warning); }
+    .log-report { color: var(--success); }
+    .log-info { color: var(--text-muted); }
+    .log-err { color: #f43f5e; }
+
+    .terminal-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      background: #090d16;
+      border-top: 1px solid #1e293b;
+    }
+
+    .btn-terminal {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      font-family: inherit;
+      padding: 0.35rem 0.75rem;
+      border-radius: 0.375rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: var(--transition-fast);
+    }
+
+    .btn-terminal:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+    }
+
+    .toggle-cold-start {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .toggle-cold-start input {
+      accent-color: var(--warning);
+      cursor: pointer;
+    }
+
+    /* Sandbox API controls */
+    .sandbox-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .api-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+    }
+
+    .btn-api {
+      background: #1e293b;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.25rem;
+      transition: var(--transition-fast);
+    }
+
+    .btn-api:hover {
+      background: rgba(14, 165, 233, 0.1);
+      border-color: var(--primary);
+    }
+
+    .btn-api .method {
+      font-size: 0.7rem;
+      color: var(--primary);
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    .btn-api.post .method {
+      color: var(--success);
+    }
+
+    .sandbox-form {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      display: none;
+      flex-direction: column;
+      gap: 0.75rem;
+      animation: slideDown 0.2s ease-out;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .form-group label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .form-group input {
+      background: #0f172a;
+      border: 1px solid var(--border-color);
+      border-radius: 0.375rem;
+      padding: 0.5rem 0.75rem;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.875rem;
+      outline: none;
+      transition: var(--transition-fast);
+    }
+
+    .form-group input:focus {
+      border-color: var(--success);
+      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
+    }
+
+    .btn-submit-user {
+      background: var(--success);
+      border: none;
+      color: #020617;
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      font-weight: 700;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: var(--transition-fast);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn-submit-user:hover {
+      background: #34d399;
+      transform: translateY(-1px);
+    }
+
+    /* AWS Calculator */
+    .calculator-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .calculator-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .label-value {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .calc-slider {
+      width: 100%;
+      height: 6px;
+      background: #1e293b;
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .calc-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+      box-shadow: 0 0 10px var(--primary);
+      transition: var(--transition-fast);
+    }
+
+    .calc-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .calc-select {
+      background: #0f172a;
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 0.65rem;
+      color: var(--text-main);
+      font-family: inherit;
+      outline: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    .calc-select:focus {
+      border-color: var(--primary);
+    }
+
+    .calc-checkbox-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .calc-checkbox-container input {
+      accent-color: var(--primary);
+      cursor: pointer;
+      width: 16px;
+      height: 16px;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border-color);
+      margin: 0.5rem 0;
+    }
+
+    .cost-summary {
+      background: rgba(14, 165, 233, 0.05);
+      border: 1px solid rgba(14, 165, 233, 0.15);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .cost-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .cost-item.total {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-main);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 0.5rem;
+    }
+
+    .cost-item.total .price {
+      background: linear-gradient(135deg, var(--primary), var(--warning));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Insights Hub (Tabs for queries) */
+    .tabs-header {
+      display: flex;
+      border-bottom: 1px solid var(--border-color);
+      overflow-x: auto;
+      gap: 0.5rem;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 0.75rem 1rem;
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: var(--transition-fast);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    .tab-panel {
+      display: none;
+      flex-direction: column;
+      gap: 1rem;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .tab-panel.active {
+      display: flex;
+    }
+
+    .code-block {
+      background: #020617;
+      border: 1px solid #1e293b;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.825rem;
+      position: relative;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    .btn-copy {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      background: #1e293b;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 0.35rem 0.65rem;
+      border-radius: 0.375rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: var(--transition-fast);
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .btn-copy:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+    }
+
+    .tab-panel p {
+      font-size: 0.925rem;
+      color: var(--text-muted);
+    }
+
+    /* Key strategies list */
+    .strategies-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .strategy-item {
+      display: flex;
+      gap: 0.75rem;
+      font-size: 0.9rem;
+    }
+
+    .strategy-icon {
+      flex-shrink: 0;
+      color: var(--warning);
+      margin-top: 0.15rem;
+    }
+
+    .strategy-content strong {
+      color: var(--text-main);
+    }
+
+    .strategy-content p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+    }
+
+    /* Footer styling */
+    footer {
+      border-top: 1px solid var(--border-color);
+      padding: 2.5rem 2rem;
+      text-align: center;
+      margin-top: 4rem;
+      background: rgba(2, 6, 23, 0.8);
+    }
+
+    .footer-container {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      align-items: center;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+
+    .footer-logo {
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 0.5rem;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 1.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .footer-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: var(--transition-fast);
+    }
+
+    .footer-link:hover {
+      color: var(--primary);
+    }
+
+    /* Dynamic keyframe animations */
+    @keyframes pulse {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.4);
+      }
+      50% {
+        box-shadow: 0 0 0 8px rgba(14, 165, 233, 0);
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation Header -->
+  <header>
+    <div class="header-container">
+      <a href="#" class="logo" id="logo-link">
+        <svg viewBox="0 0 24 24" stroke="currentColor">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+          <polyline points="2 17 12 22 22 17"></polyline>
+          <polyline points="2 12 12 17 22 12"></polyline>
+        </svg>
+        <span>LambdaExpress</span>
+      </a>
+      <nav id="main-nav">
+        <a href="setup.md" class="nav-link">Setup</a>
+        <a href="architecture.md" class="nav-link">Architecture</a>
+        <a href="api-spec.md" class="nav-link">API Spec</a>
+        <a href="deployment.md" class="nav-link">Deployment</a>
+      </nav>
+      <a href="https://github.com/vikaskumar171020/aws-lamda" class="btn-github" target="_blank" rel="noopener noreferrer" id="github-link">
+        <svg height="18" width="18" fill="currentColor" viewBox="0 0 16 16">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+        </svg>
+        GitHub
+      </a>
+    </div>
+  </header>
+
+  <!-- Content Container -->
+  <main>
+    
+    <!-- Hero Header -->
+    <section class="hero" id="hero-section">
+      <div class="badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        Ready to Monitor
+      </div>
+      <h1>AWS Lambda Express Telemetry</h1>
+      <p>Analyze totals, retrieve operational insights, and optimize the execution footprint of your serverless Express API.</p>
+    </section>
+
+    <!-- Total (Metrics Cards Grid) -->
+    <section id="totals-section">
+      <h2 class="section-title">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z"></path>
+        </svg>
+        Operational Totals
+      </h2>
+      <div class="grid-metrics">
+        
+        <div class="card-metric primary">
+          <div class="metric-header">
+            <div class="metric-title">Invocations</div>
+            <div class="metric-icon">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="metric-value" id="metric-invocations">0</div>
+          <div class="metric-desc">Total cumulative simulated endpoint requests.</div>
+        </div>
+
+        <div class="card-metric warning">
+          <div class="metric-header">
+            <div class="metric-title">Cold Starts</div>
+            <div class="metric-icon">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m11.32 11.32l.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="metric-value" id="metric-coldstarts">0</div>
+          <div class="metric-desc">Invocations requiring full microVM instantiation.</div>
+        </div>
+
+        <div class="card-metric success">
+          <div class="metric-header">
+            <div class="metric-title">Mock DB Users</div>
+            <div class="metric-icon">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="metric-value" id="metric-users">2</div>
+          <div class="metric-desc">Total active users loaded in memory database.</div>
+        </div>
+
+        <div class="card-metric danger">
+          <div class="metric-header">
+            <div class="metric-title">Estimated Cost</div>
+            <div class="metric-icon">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="metric-value" id="metric-cost">$0.00</div>
+          <div class="metric-desc">Estimated monthly AWS Lambda base fee.</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Dashboard Core (Interactive elements) -->
+    <div class="dashboard-layout">
+      
+      <!-- Panel 1: Interactive Sandbox -->
+      <section class="panel" id="sandbox-panel">
+        <h3 class="section-title" style="margin-bottom: 0.5rem;">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="stroke: var(--primary);">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
+          Express API Sandbox
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">
+          Interact directly with a simulated API Gateway environment. Monitor live execution timelines and Cold Starts streaming straight to a mock CloudWatch interface.
+        </p>
+
+        <div class="sandbox-controls">
+          <div class="api-buttons">
+            <button class="btn-api" onclick="runSimulatedRoute('GET', '/')">
+              <span class="method">GET</span>
+              <span>/</span>
+            </button>
+            <button class="btn-api" onclick="runSimulatedRoute('GET', '/health')">
+              <span class="method">GET</span>
+              <span>/health</span>
+            </button>
+            <button class="btn-api" onclick="runSimulatedRoute('GET', '/users')">
+              <span class="method">GET</span>
+              <span>/users</span>
+            </button>
+          </div>
+          
+          <button class="btn-api post" onclick="togglePostForm()" style="width: 100%;">
+            <span class="method">POST</span>
+            <span>/users (Create Mock User)</span>
+          </button>
+
+          <!-- Post user inline form -->
+          <div class="sandbox-form" id="user-form">
+            <div class="form-group">
+              <label for="input-name">User Name</label>
+              <input type="text" id="input-name" placeholder="John Doe" value="John Doe">
+            </div>
+            <div class="form-group">
+              <label for="input-email">Email Address</label>
+              <input type="email" id="input-email" placeholder="john@example.com" value="john@example.com">
+            </div>
+            <button class="btn-submit-user" onclick="submitSimulatedUser()">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"></path>
+              </svg>
+              Submit API POST Request
+            </button>
+          </div>
+        </div>
+
+        <!-- Styled CloudWatch Terminal -->
+        <div class="terminal-container">
+          <div class="terminal-header">
+            <div class="terminal-dots">
+              <div class="terminal-dot dot-red"></div>
+              <div class="terminal-dot dot-yellow"></div>
+              <div class="terminal-dot dot-green"></div>
+            </div>
+            <div class="terminal-title">CloudWatch log stream</div>
+            <div></div>
+          </div>
+          
+          <div class="terminal-body" id="log-display">
+            <div class="log-line log-info">⚡ Simulator online. Click an API endpoint above to trigger a request log stream.</div>
+          </div>
+
+          <div class="terminal-actions">
+            <label class="toggle-cold-start">
+              <input type="checkbox" id="force-cold" checked> Force Cold Start
+            </label>
+            <button class="btn-terminal" onclick="clearLogs()">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </svg>
+              Clear Log Buffer
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Panel 2: Cost Calculator -->
+      <section class="panel" id="calculator-panel">
+        <h3 class="section-title" style="margin-bottom: 0.5rem;">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="stroke: var(--success);">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 11h.01M12 7h.01M9 10h.01M12 10h.01M15 10h.01M15 14h.01M15 17h.01M15 11h.01M9 11h.01M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2z"></path>
+          </svg>
+          AWS cost estimator
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">
+          Dynamic cost calculation for host workloads on AWS Lambda. Toggles memory, scale, and free-tier allocation.
+        </p>
+
+        <div class="calculator-container">
+          
+          <div class="calculator-row">
+            <div class="label-value">
+              <label for="calc-requests">Monthly Invocations</label>
+              <span id="val-requests" style="color: var(--primary);">5,000,000</span>
+            </div>
+            <input type="range" id="calc-requests" class="calc-slider" min="100000" max="50000000" step="100000" value="5000000" oninput="updateCostCalculator()">
+          </div>
+
+          <div class="calculator-row">
+            <div class="label-value">
+              <label for="calc-duration">Average Execution Duration</label>
+              <span id="val-duration" style="color: var(--warning);">120 ms</span>
+            </div>
+            <input type="range" id="calc-duration" class="calc-slider" min="1" max="1000" step="1" value="120" oninput="updateCostCalculator()">
+          </div>
+
+          <div class="calculator-row">
+            <label for="calc-memory" style="font-size: 0.9rem; font-weight: 600;">Provisioned RAM Allocation</label>
+            <select id="calc-memory" class="calc-select" onchange="updateCostCalculator()">
+              <option value="128">128 MB (Compute: 0.000125 GB-s)</option>
+              <option value="256">256 MB (Compute: 0.000250 GB-s)</option>
+              <option value="512" selected>512 MB (Compute: 0.000500 GB-s)</option>
+              <option value="1024">1024 MB (Compute: 0.001000 GB-s)</option>
+              <option value="2048">2048 MB (Compute: 0.002000 GB-s)</option>
+            </select>
+          </div>
+
+          <div class="divider"></div>
+
+          <label class="calc-checkbox-container">
+            <input type="checkbox" id="calc-freetier" checked onchange="updateCostCalculator()">
+            <span>Include AWS Always Free Tier (1M free reqs + 400K GB-s compute)</span>
+          </label>
+
+          <div class="cost-summary">
+            <div class="cost-item">
+              <span>Billed Invocations:</span>
+              <span id="billed-reqs">4,000,000</span>
+            </div>
+            <div class="cost-item">
+              <span>Billed GB-Seconds:</span>
+              <span id="billed-gb">2,100.00 GB-s</span>
+            </div>
+            <div class="cost-item">
+              <span>Request Base Fee:</span>
+              <span id="fee-requests">$0.80</span>
+            </div>
+            <div class="cost-item">
+              <span>Compute Base Fee:</span>
+              <span id="fee-compute">$35.00</span>
+            </div>
+            <div class="cost-item total">
+              <span>Estimated Cost:</span>
+              <span class="price" id="fee-total">$35.80</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Telemetry Insights section -->
+    <section id="insights-section" class="panel">
+      <h3 class="section-title">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="stroke: var(--warning);">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        Observability Insights Hub
+      </h3>
+      <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: -1rem;">
+        Get actionable details about application behavior. Select a metric category to view pre-built CloudWatch Logs Insights queries.
+      </p>
+
+      <div class="tabs-header">
+        <button class="tab-btn active" onclick="switchTab(event, 'tab-cold-starts')" id="btn-tab-cold-starts">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m11.32 11.32l.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z"></path>
+          </svg>
+          Cold Starts
+        </button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-latency')" id="btn-tab-latency">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          Latency Percentiles
+        </button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-errors')" id="btn-tab-errors">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+          </svg>
+          Error Tracking
+        </button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-memory')" id="btn-tab-memory">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+          </svg>
+          Memory footprint
+        </button>
+      </div>
+
+      <!-- Tab Content Cards -->
+      <div id="tab-cold-starts" class="tab-panel active">
+        <p>This CloudWatch Logs Insights query extracts execution stats to calculate the total percentage of requests experiencing cold starts (initialization delays).</p>
+        <div class="code-block" id="query-cold-starts">filter @type = "REPORT"
+| stats count() as TotalInvocations, 
+        count(@initDuration) as ColdStarts, 
+        (count(@initDuration)/count())*100 as ColdStartPct
+| sort ColdStartPct desc<button class="btn-copy" onclick="copyQuery('query-cold-starts')">Copy Query</button></div>
+      </div>
+
+      <div id="tab-latency" class="tab-panel">
+        <p>Analyze performance profiles across p50, p90, and p99 percentiles to track response distribution and diagnose slow executions.</p>
+        <div class="code-block" id="query-latency">filter @type = "REPORT"
+| stats pct(@duration, 50) as p50, 
+        pct(@duration, 90) as p90, 
+        pct(@duration, 99) as p99 by bin(1h)
+| sort @timestamp desc<button class="btn-copy" onclick="copyQuery('query-latency')">Copy Query</button></div>
+      </div>
+
+      <div id="tab-errors" class="tab-panel">
+        <p>Identify error conditions, application crashes, uncaught exceptions, and bad request statuses (4xx/5xx) occurring inside the container handler.</p>
+        <div class="code-block" id="query-errors">filter @message like /error/ or @message like /Error/ or @message like /404/ or @message like /500/
+| fields @timestamp, @message, @logStream, @requestId
+| sort @timestamp desc
+| limit 50<button class="btn-copy" onclick="copyQuery('query-errors')">Copy Query</button></div>
+      </div>
+
+      <div id="tab-memory" class="tab-panel">
+        <p>Audit provisioned memory settings. This helps prevent over-provisioning (wasting budget) and under-provisioning (triggering performance slowdowns).</p>
+        <div class="code-block" id="query-memory">filter @type = "REPORT"
+| stats max(@maxMemoryUsed) as MaxMemoryUsed, 
+        avg(@maxMemoryUsed) as AvgMemoryUsed, 
+        max(@memorySize) as ProvisionedMemory
+| sort @timestamp desc<button class="btn-copy" onclick="copyQuery('query-memory')">Copy Query</button></div>
+      </div>
+
+    </section>
+
+    <!-- Optimization guidelines -->
+    <section class="panel" id="strategies-section">
+      <h3 class="section-title">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="stroke: var(--success);">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+        </svg>
+        Optimal Performance Guidelines
+      </h3>
+      <div class="strategies-list">
+        
+        <div class="strategy-item">
+          <div class="strategy-icon">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <div class="strategy-content">
+            <strong>Enable AWS Lambda Insights Layer</strong>
+            <p>Deploy the CloudWatch Lambda Insights extension layer to capture enhanced operating system metrics, including precise CPU memory workloads and local network I/O.</p>
+          </div>
+        </div>
+
+        <div class="strategy-item">
+          <div class="strategy-icon">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <div class="strategy-content">
+            <strong>Optimize Dependency Bundle (Webpack/Esbuild)</strong>
+            <p>This project uses <code>esbuild</code> to bundle the API code. Keep bundling minification active to ensure file sizes are small, keeping cold start file-loading times under 150ms.</p>
+          </div>
+        </div>
+
+        <div class="strategy-item">
+          <div class="strategy-icon">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <div class="strategy-content">
+            <strong>Provisioned Concurrency vs On-Demand</strong>
+            <p>If p99 user latency is a critical business metric, provision pre-warmed instances to eliminate Cold Starts completely during high-traffic windows.</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-container">
+      <div class="footer-logo">LambdaExpress Observability Hub</div>
+      <p>&copy; 2026 Vikas Kumar. Deployed via GitHub Pages.</p>
+      <div class="footer-links" id="footer-nav">
+        <a href="setup.md" class="footer-link">Setup</a>
+        <a href="architecture.md" class="footer-link">Architecture</a>
+        <a href="api-spec.md" class="footer-link">API Spec</a>
+        <a href="deployment.md" class="footer-link">Deployment</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script>
+    // Simulator State Variables
+    let invocationCount = 0;
+    let coldStartCount = 0;
+    const mockUsers = [
+      { id: '1', name: 'John Doe', email: 'john@example.com' },
+      { id: '2', name: 'Jane Smith', email: 'jane@example.com' }
+    ];
+
+    // Initialize metrics and costs
+    window.addEventListener('DOMContentLoaded', () => {
+      updateCostCalculator();
+    });
+
+    // Sandbox Logs & Route simulation
+    function runSimulatedRoute(method, path) {
+      invocationCount++;
+      document.getElementById('metric-invocations').textContent = invocationCount;
+
+      const isCold = document.getElementById('force-cold').checked;
+      let initTime = 0;
+      if (isCold) {
+        coldStartCount++;
+        document.getElementById('metric-coldstarts').textContent = coldStartCount;
+        initTime = parseFloat((120 + Math.random() * 60).toFixed(2));
+        // Reset checkbox to simulate that subsequent requests are warm unless forced
+        document.getElementById('force-cold').checked = false;
+      }
+
+      const reqId = uuidv4();
+      const timestamp = new Date().toISOString();
+      const logBody = document.getElementById('log-display');
+
+      // 1. START line
+      const startLine = document.createElement('div');
+      startLine.className = 'log-line log-start';
+      startLine.textContent = `START RequestId: ${reqId} Version: $LATEST`;
+      logBody.appendChild(startLine);
+
+      // 2. Info request line
+      const infoLine = document.createElement('div');
+      infoLine.className = 'log-line log-info';
+      infoLine.textContent = `[INFO] ${timestamp} - ${method} ${path}`;
+      logBody.appendChild(infoLine);
+
+      // 3. Simulated payload & logic line
+      const logicLine = document.createElement('div');
+      logicLine.className = 'log-line';
+      let payloadStr = '';
+      let statusCode = 200;
+
+      if (path === '/') {
+        payloadStr = JSON.stringify({
+          message: 'Welcome to the AWS Lambda Express API with TypeScript!',
+          status: 'Running',
+          timestamp: timestamp,
+          endpoints: { health: 'GET /health', users: 'GET /users', createUser: 'POST /users' }
+        }, null, 2);
+      } else if (path === '/health') {
+        payloadStr = JSON.stringify({ status: 'UP', uptime: processUptime() }, null, 2);
+      } else if (path === '/users') {
+        payloadStr = JSON.stringify({ count: mockUsers.length, users: mockUsers }, null, 2);
+      }
+
+      logicLine.textContent = `[INFO] Response Code: ${statusCode}\n[BODY]: ${payloadStr}`;
+      logBody.appendChild(logicLine);
+
+      // 4. END line
+      const endLine = document.createElement('div');
+      endLine.className = 'log-line log-end';
+      endLine.textContent = `END RequestId: ${reqId}`;
+      logBody.appendChild(endLine);
+
+      // 5. REPORT line
+      const executionTime = parseFloat((2 + Math.random() * 8).toFixed(2));
+      const billedTime = Math.ceil(executionTime);
+      const reportLine = document.createElement('div');
+      reportLine.className = 'log-line log-report';
+      reportLine.textContent = `REPORT RequestId: ${reqId}\tDuration: ${executionTime} ms\tBilled Duration: ${billedTime} ms\tMemory Size: 512 MB\tMax Memory Used: 76 MB` + 
+        (isCold ? `\tInit Duration: ${initTime} ms` : '');
+      logBody.appendChild(reportLine);
+
+      // Scroll to bottom of terminal
+      logBody.scrollTop = logBody.scrollHeight;
+    }
+
+    function togglePostForm() {
+      const form = document.getElementById('user-form');
+      if (form.style.display === 'flex') {
+        form.style.display = 'none';
+      } else {
+        form.style.display = 'flex';
+      }
+    }
+
+    function submitSimulatedUser() {
+      const nameInput = document.getElementById('input-name');
+      const emailInput = document.getElementById('input-email');
+      const name = nameInput.value.trim();
+      const email = emailInput.value.trim();
+
+      if (!name || !email) {
+        alert('Please fill out name and email fields.');
+        return;
+      }
+
+      invocationCount++;
+      document.getElementById('metric-invocations').textContent = invocationCount;
+
+      const isCold = document.getElementById('force-cold').checked;
+      let initTime = 0;
+      if (isCold) {
+        coldStartCount++;
+        document.getElementById('metric-coldstarts').textContent = coldStartCount;
+        initTime = parseFloat((120 + Math.random() * 60).toFixed(2));
+        document.getElementById('force-cold').checked = false;
+      }
+
+      const reqId = uuidv4();
+      const timestamp = new Date().toISOString();
+      const logBody = document.getElementById('log-display');
+
+      // Append new mock user
+      const nextId = (mockUsers.length + 1).toString();
+      const newUser = { id: nextId, name, email };
+      mockUsers.push(newUser);
+      document.getElementById('metric-users').textContent = mockUsers.length;
+
+      // 1. START line
+      const startLine = document.createElement('div');
+      startLine.className = 'log-line log-start';
+      startLine.textContent = `START RequestId: ${reqId} Version: $LATEST`;
+      logBody.appendChild(startLine);
+
+      // 2. Info request line
+      const infoLine = document.createElement('div');
+      infoLine.className = 'log-line log-info';
+      infoLine.textContent = `[INFO] ${timestamp} - POST /users\n[BODY]: ${JSON.stringify({ name, email })}`;
+      logBody.appendChild(infoLine);
+
+      // 3. Logic line
+      const logicLine = document.createElement('div');
+      logicLine.className = 'log-line';
+      const payloadStr = JSON.stringify({
+        message: 'User created successfully',
+        user: newUser
+      }, null, 2);
+      logicLine.textContent = `[INFO] Response Code: 201 Created\n[BODY]: ${payloadStr}`;
+      logBody.appendChild(logicLine);
+
+      // 4. END line
+      const endLine = document.createElement('div');
+      endLine.className = 'log-line log-end';
+      endLine.textContent = `END RequestId: ${reqId}`;
+      logBody.appendChild(endLine);
+
+      // 5. REPORT line
+      const executionTime = parseFloat((5 + Math.random() * 12).toFixed(2));
+      const billedTime = Math.ceil(executionTime);
+      const reportLine = document.createElement('div');
+      reportLine.className = 'log-line log-report';
+      reportLine.textContent = `REPORT RequestId: ${reqId}\tDuration: ${executionTime} ms\tBilled Duration: ${billedTime} ms\tMemory Size: 512 MB\tMax Memory Used: 78 MB` + 
+        (isCold ? `\tInit Duration: ${initTime} ms` : '');
+      logBody.appendChild(reportLine);
+
+      // Reset form controls
+      nameInput.value = '';
+      emailInput.value = '';
+      document.getElementById('user-form').style.display = 'none';
+
+      // Scroll to bottom of terminal
+      logBody.scrollTop = logBody.scrollHeight;
+    }
+
+    function clearLogs() {
+      document.getElementById('log-display').innerHTML = '<div class="log-line log-info">🧹 Log buffer cleared.</div>';
+    }
+
+    // Helper functions
+    function uuidv4() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+
+    let pageLoadTime = Date.now();
+    function processUptime() {
+      return parseFloat(((Date.now() - pageLoadTime) / 1000).toFixed(2));
+    }
+
+    // AWS Cost Calculator Logic
+    function updateCostCalculator() {
+      const sliderRequests = document.getElementById('calc-requests');
+      const sliderDuration = document.getElementById('calc-duration');
+      const selectMemory = document.getElementById('calc-memory');
+      const checkFreetier = document.getElementById('calc-freetier');
+
+      const requestsVal = parseInt(sliderRequests.value);
+      const durationVal = parseInt(sliderDuration.value);
+      const memoryVal = parseInt(selectMemory.value);
+      const freetierVal = checkFreetier.checked;
+
+      // Update text values
+      document.getElementById('val-requests').textContent = requestsVal.toLocaleString();
+      document.getElementById('val-duration').textContent = durationVal + ' ms';
+
+      // AWS Lambda cost coefficients (x86_64 architecture)
+      const costPerReq = 0.0000002; // $0.20 per million requests
+      const costPerGbSec = 0.0000166667; // $0.0000166667 per GB-second
+
+      // Free tier allowances
+      const freeReqs = freetierVal ? 1000000 : 0;
+      const freeGbSec = freetierVal ? 400000 : 0;
+
+      // Calculated values
+      const totalGbSec = requestsVal * (durationVal / 1000) * (memoryVal / 1024);
+      
+      const billedReqs = Math.max(0, requestsVal - freeReqs);
+      const billedGbSec = Math.max(0, totalGbSec - freeGbSec);
+
+      const feeReq = billedReqs * costPerReq;
+      const feeCompute = billedGbSec * costPerGbSec;
+      const feeTotal = feeReq + feeCompute;
+
+      // Update UI elements
+      document.getElementById('billed-reqs').textContent = billedReqs.toLocaleString();
+      document.getElementById('billed-gb').textContent = billedGbSec.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' GB-s';
+      document.getElementById('fee-requests').textContent = '$' + feeReq.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      document.getElementById('fee-compute').textContent = '$' + feeCompute.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      
+      const totalStr = '$' + feeTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      document.getElementById('fee-total').textContent = totalStr;
+      
+      // Sync dashboard cost metric card
+      document.getElementById('metric-cost').textContent = totalStr;
+    }
+
+    // Tabs switching logic
+    function switchTab(evt, tabId) {
+      const tabpanels = document.getElementsByClassName('tab-panel');
+      for (let i = 0; i < tabpanels.length; i++) {
+        tabpanels[i].className = tabpanels[i].className.replace(' active', '');
+      }
+
+      const tabbtns = document.getElementsByClassName('tab-btn');
+      for (let i = 0; i < tabbtns.length; i++) {
+        tabbtns[i].className = tabbtns[i].className.replace(' active', '');
+      }
+
+      document.getElementById(tabId).className += ' active';
+      evt.currentTarget.className += ' active';
+    }
+
+    // Clipboard copy tool
+    function copyQuery(elemId) {
+      const codeElem = document.getElementById(elemId);
+      // Exclude copy button text
+      let codeText = codeElem.innerText || codeElem.textContent;
+      if (codeText.includes('Copy Query')) {
+        codeText = codeText.replace('Copy Query', '').trim();
+      }
+
+      navigator.clipboard.writeText(codeText).then(() => {
+        const copyBtn = codeElem.querySelector('.btn-copy');
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = 'Copied!';
+        copyBtn.style.background = 'var(--success)';
+        copyBtn.style.color = '#020617';
+        copyBtn.style.borderColor = 'var(--success)';
+        
+        setTimeout(() => {
+          copyBtn.textContent = originalText;
+          copyBtn.style.background = '';
+          copyBtn.style.color = '';
+          copyBtn.style.borderColor = '';
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy to clipboard', err);
+      });
+    }
+  </script>
+</body>
+</html>
