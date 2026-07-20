@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Local development setup guide for the AWS Lambda Express API with TypeScript. Install dependencies, run locally, and execute unit tests.">
+  <title>Setup Guide - LambdaExpress</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-base: #020617;
+      --bg-surface: rgba(15, 23, 42, 0.6);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --primary-hsl: 199, 89%, 48%;
+      --primary: hsl(var(--primary-hsl));
+      --primary-glow: rgba(14, 165, 233, 0.15);
+      --warning-hsl: 262, 83%, 58%;
+      --warning: hsl(var(--warning-hsl));
+      --success-hsl: 142, 71%, 45%;
+      --success: hsl(var(--success-hsl));
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: 'Outfit', sans-serif;
+      line-height: 1.6;
+      background-image: radial-gradient(circle at 10% 20%, rgba(14, 165, 233, 0.03) 0%, transparent 40%);
+      background-attachment: fixed;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg-base); }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
+
+    header {
+      background: rgba(2, 6, 23, 0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 1rem 2rem;
+    }
+
+    .header-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 700;
+      font-size: 1.25rem;
+      letter-spacing: -0.025em;
+      color: var(--text-main);
+      text-decoration: none;
+    }
+
+    .logo span {
+      background: linear-gradient(135deg, var(--primary), var(--warning));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo svg {
+      width: 28px;
+      height: 28px;
+      fill: none;
+      stroke: var(--primary);
+      stroke-width: 2;
+    }
+
+    nav { display: flex; gap: 1rem; }
+
+    .nav-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: var(--transition-fast);
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.375rem;
+    }
+
+    .nav-link:hover, .nav-link.active {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .nav-link.active {
+      color: var(--primary);
+      border-bottom: 2px solid var(--primary);
+      border-radius: 0.375rem 0.375rem 0 0;
+    }
+
+    main {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2.5rem;
+    }
+
+    .hero-title {
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1.5rem;
+    }
+
+    .hero-title h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #ffffff 60%, var(--text-muted));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    .hero-title p {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+    }
+
+    .panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 1rem;
+      padding: 2rem;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    h2::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 20px;
+      background: var(--primary);
+      border-radius: 2px;
+    }
+
+    p {
+      color: var(--text-muted);
+      margin-bottom: 1.25rem;
+      font-size: 1rem;
+    }
+
+    ul, ol {
+      color: var(--text-muted);
+      margin-left: 1.5rem;
+      margin-bottom: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    li strong {
+      color: var(--text-main);
+    }
+
+    .code-block {
+      background: #020617;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 0.5rem;
+      padding: 1.25rem;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.9rem;
+      position: relative;
+      overflow-x: auto;
+      margin-bottom: 1.5rem;
+      color: #e2e8f0;
+    }
+
+    .btn-copy {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      background: #1e293b;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 0.35rem 0.65rem;
+      border-radius: 0.375rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+      font-family: 'Outfit', sans-serif;
+      transition: var(--transition-fast);
+    }
+
+    .btn-copy:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border-color);
+      margin: 2rem 0;
+    }
+
+    footer {
+      border-top: 1px solid var(--border-color);
+      padding: 2rem;
+      text-align: center;
+      background: rgba(2, 6, 23, 0.8);
+      margin-top: 4rem;
+    }
+
+    .footer-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+    }
+
+    .footer-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: var(--transition-fast);
+    }
+
+    .footer-link:hover { color: var(--primary); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-container">
+      <a href="index.html" class="logo">
+        <svg viewBox="0 0 24 24" stroke="currentColor">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+          <polyline points="2 17 12 22 22 17"></polyline>
+          <polyline points="2 12 12 17 22 12"></polyline>
+        </svg>
+        <span>LambdaExpress</span>
+      </a>
+      <nav>
+        <a href="index.html" class="nav-link">Dashboard</a>
+        <a href="setup.html" class="nav-link active">Setup</a>
+        <a href="architecture.html" class="nav-link">Architecture</a>
+        <a href="api-spec.html" class="nav-link">API Spec</a>
+        <a href="deployment.html" class="nav-link">Deployment</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero-title">
+      <h1>Local Development Setup</h1>
+      <p>Follow these instructions to configure and run your serverless Express API on your local machine.</p>
+    </div>
+
+    <section class="panel">
+      <h2>Prerequisites</h2>
+      <p>Ensure you have the following resources installed on your development workstation:</p>
+      <ul>
+        <li><strong>Node.js</strong>: Version 20.x or higher is recommended for compilation and runtime.</li>
+        <li><strong>npm</strong>: Node package manager (bundled natively with Node.js).</li>
+        <li><strong>AWS CLI</strong>: Configured with appropriate AWS developer credentials.</li>
+        <li><strong>AWS SAM CLI</strong>: Command Line Interface for local emulation, building, and deployments.</li>
+        <li><strong>Docker</strong>: Required by AWS SAM to host local containerized Lambda execution environments.</li>
+      </ul>
+
+      <div class="divider"></div>
+
+      <h2>1. Install Project Dependencies</h2>
+      <p>Run the package manager from the root directory to configure the environment, typescript interfaces, and dev tools:</p>
+      <div class="code-block" id="cmd-install">npm install<button class="btn-copy" onclick="copyText('cmd-install')">Copy</button></div>
+
+      <h2>2. Build and Compile TypeScript</h2>
+      <p>Use AWS SAM to build the application. This compiles code via <code>esbuild</code> based on the rules specified in your <code>template.yaml</code> file:</p>
+      <div class="code-block" id="cmd-build">npm run build<button class="btn-copy" onclick="copyText('cmd-build')">Copy</button></div>
+
+      <h2>3. Run Local Emulation Server</h2>
+      <p>Launch the local API Gateway. AWS SAM emulates the environment inside a Docker container, routing events directly to your Express app:</p>
+      <div class="code-block" id="cmd-local">npm run local<button class="btn-copy" onclick="copyText('cmd-local')">Copy</button></div>
+      <p>Your API will now be listening on <strong>http://127.0.0.1:3000</strong>. You can query endpoints via your browser, Postman, or terminal utilities.</p>
+
+      <h2>4. Run Unit Tests</h2>
+      <p>Execute tests using Jest and Supertest to verify controller routes and validation criteria:</p>
+      <div class="code-block" id="cmd-test">npm test<button class="btn-copy" onclick="copyText('cmd-test')">Copy</button></div>
+      <p>To run coverage reports ensuring at least <strong>80% code coverage</strong> is maintained:</p>
+      <div class="code-block" id="cmd-coverage">npm run test:coverage<button class="btn-copy" onclick="copyText('cmd-coverage')">Copy</button></div>
+
+      <h2>5. Verification & Type Checking</h2>
+      <p>Verify that there are no TypeScript syntax or compilation discrepancies in the codebase:</p>
+      <div class="code-block" id="cmd-check">npm run type-check<button class="btn-copy" onclick="copyText('cmd-check')">Copy</button></div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-container">
+      <div class="footer-links">
+        <a href="index.html" class="footer-link">Dashboard</a>
+        <a href="setup.html" class="footer-link">Setup</a>
+        <a href="architecture.html" class="footer-link">Architecture</a>
+        <a href="api-spec.html" class="footer-link">API Spec</a>
+        <a href="deployment.html" class="footer-link">Deployment</a>
+      </div>
+      <p>&copy; 2026 Vikas Kumar. Project documentation page.</p>
+    </div>
+  </footer>
+
+  <script>
+    function copyText(elemId) {
+      const codeElem = document.getElementById(elemId);
+      let text = codeElem.innerText || codeElem.textContent;
+      if (text.includes('Copy')) {
+        text = text.replace('Copy', '').trim();
+      }
+      navigator.clipboard.writeText(text).then(() => {
+        const copyBtn = codeElem.querySelector('.btn-copy');
+        const original = copyBtn.textContent;
+        copyBtn.textContent = 'Copied!';
+        copyBtn.style.background = 'var(--success)';
+        copyBtn.style.color = '#020617';
+        setTimeout(() => {
+          copyBtn.textContent = original;
+          copyBtn.style.background = '';
+          copyBtn.style.color = '';
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>

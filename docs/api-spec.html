@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="API endpoints, requests, and response models for the AWS Lambda Express API with TypeScript.">
+  <title>API Specification - LambdaExpress</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-base: #020617;
+      --bg-surface: rgba(15, 23, 42, 0.6);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --primary-hsl: 199, 89%, 48%;
+      --primary: hsl(var(--primary-hsl));
+      --warning-hsl: 262, 83%, 58%;
+      --warning: hsl(var(--warning-hsl));
+      --success-hsl: 142, 71%, 45%;
+      --success: hsl(var(--success-hsl));
+      --danger-hsl: 346, 87%, 57%;
+      --danger: hsl(var(--danger-hsl));
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: 'Outfit', sans-serif;
+      line-height: 1.6;
+      background-image: radial-gradient(circle at 10% 80%, rgba(16, 185, 129, 0.03) 0%, transparent 40%);
+      background-attachment: fixed;
+    }
+
+    header {
+      background: rgba(2, 6, 23, 0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 1rem 2rem;
+    }
+
+    .header-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 700;
+      font-size: 1.25rem;
+      text-decoration: none;
+      color: var(--text-main);
+    }
+
+    .logo span {
+      background: linear-gradient(135deg, var(--primary), var(--warning));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo svg {
+      width: 28px;
+      height: 28px;
+      fill: none;
+      stroke: var(--primary);
+      stroke-width: 2;
+    }
+
+    nav { display: flex; gap: 1rem; }
+
+    .nav-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: var(--transition-fast);
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.375rem;
+    }
+
+    .nav-link:hover, .nav-link.active {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .nav-link.active {
+      color: var(--primary);
+    }
+
+    main {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2.5rem;
+    }
+
+    .hero-title {
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1.5rem;
+    }
+
+    .hero-title h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #ffffff 60%, var(--text-muted));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    .hero-title p {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+    }
+
+    .panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 1rem;
+      padding: 2rem;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    h2::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 20px;
+      background: var(--primary);
+      border-radius: 2px;
+    }
+
+    p {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    /* Endpoint card */
+    .endpoint-card {
+      border: 1px solid var(--border-color);
+      border-radius: 0.75rem;
+      overflow: hidden;
+      background: rgba(2, 6, 23, 0.4);
+    }
+
+    .endpoint-header {
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid var(--border-color);
+      flex-wrap: wrap;
+    }
+
+    .method-badge {
+      font-size: 0.75rem;
+      font-weight: 800;
+      padding: 0.25rem 0.65rem;
+      border-radius: 0.25rem;
+      letter-spacing: 0.05em;
+    }
+
+    .method-badge.get {
+      background: rgba(14, 165, 233, 0.15);
+      color: var(--primary);
+      border: 1px solid rgba(14, 165, 233, 0.3);
+    }
+
+    .method-badge.post {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .endpoint-path {
+      font-family: 'Fira Code', monospace;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+
+    .endpoint-desc {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-left: auto;
+    }
+
+    .endpoint-details {
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .sub-section-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .code-block {
+      background: #020617;
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.85rem;
+      position: relative;
+      overflow-x: auto;
+      color: #e2e8f0;
+      margin-top: 0.25rem;
+    }
+
+    .btn-copy {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      background: #1e293b;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 0.35rem 0.65rem;
+      border-radius: 0.375rem;
+      font-size: 0.725rem;
+      cursor: pointer;
+      font-family: 'Outfit', sans-serif;
+      transition: var(--transition-fast);
+    }
+
+    .btn-copy:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border-color);
+      margin: 1rem 0;
+    }
+
+    footer {
+      border-top: 1px solid var(--border-color);
+      padding: 2rem;
+      text-align: center;
+      background: rgba(2, 6, 23, 0.8);
+      margin-top: 4rem;
+    }
+
+    .footer-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+    }
+
+    .footer-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: var(--transition-fast);
+    }
+
+    .footer-link:hover { color: var(--primary); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-container">
+      <a href="index.html" class="logo">
+        <svg viewBox="0 0 24 24" stroke="currentColor">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+          <polyline points="2 17 12 22 22 17"></polyline>
+          <polyline points="2 12 12 17 22 12"></polyline>
+        </svg>
+        <span>LambdaExpress</span>
+      </a>
+      <nav>
+        <a href="index.html" class="nav-link">Dashboard</a>
+        <a href="setup.html" class="nav-link">Setup</a>
+        <a href="architecture.html" class="nav-link">Architecture</a>
+        <a href="api-spec.html" class="nav-link active">API Spec</a>
+        <a href="deployment.html" class="nav-link">Deployment</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero-title">
+      <h1>API Specification</h1>
+      <p>Endpoints, structures, request configurations, and return schemas for the routing controllers.</p>
+    </div>
+
+    <!-- API Base Url panel -->
+    <section class="panel">
+      <h2>Base URL Configuration</h2>
+      <p>Configure API calls matching development and distribution endpoint gateways:</p>
+      <ul>
+        <li><strong>Local Host Engine</strong>: <code>http://127.0.0.1:3000</code></li>
+        <li><strong>AWS Deployed Stage</strong>: <code>https://{rest-api-id}.execute-api.{region}.amazonaws.com/Prod/</code></li>
+      </ul>
+    </section>
+
+    <!-- Endpoints Specification Panel -->
+    <section class="panel">
+      <h2>Endpoints Map</h2>
+      
+      <!-- Endpoint 1 -->
+      <div class="endpoint-card">
+        <div class="endpoint-header">
+          <span class="method-badge get">GET</span>
+          <span class="endpoint-path">/</span>
+          <span class="endpoint-desc">Welcome & endpoints index metadata</span>
+        </div>
+        <div class="endpoint-details">
+          <div class="sub-section-title">Success Response (200 OK)</div>
+          <div class="code-block" id="json-root">{
+  "message": "Welcome to the AWS Lambda Express API with TypeScript!",
+  "status": "Running",
+  "timestamp": "2026-07-21T00:30:00.000Z",
+  "endpoints": {
+    "health": "GET /health",
+    "users": "GET /users",
+    "createUser": "POST /users"
+  }
+}<button class="btn-copy" onclick="copyText('json-root')">Copy</button></div>
+        </div>
+      </div>
+
+      <!-- Endpoint 2 -->
+      <div class="endpoint-card">
+        <div class="endpoint-header">
+          <span class="method-badge get">GET</span>
+          <span class="endpoint-path">/health</span>
+          <span class="endpoint-desc">System health check & process uptime</span>
+        </div>
+        <div class="endpoint-details">
+          <div class="sub-section-title">Success Response (200 OK)</div>
+          <div class="code-block" id="json-health">{
+  "status": "UP",
+  "uptime": 12.34
+}<button class="btn-copy" onclick="copyText('json-health')">Copy</button></div>
+        </div>
+      </div>
+
+      <!-- Endpoint 3 -->
+      <div class="endpoint-card">
+        <div class="endpoint-header">
+          <span class="method-badge get">GET</span>
+          <span class="endpoint-path">/users</span>
+          <span class="endpoint-desc">Fetch and list database user items</span>
+        </div>
+        <div class="endpoint-details">
+          <div class="sub-section-title">Success Response (200 OK)</div>
+          <div class="code-block" id="json-users">{
+  "count": 2,
+  "users": [
+    { "id": "1", "name": "John Doe", "email": "john@example.com" },
+    { "id": "2", "name": "Jane Smith", "email": "jane@example.com" }
+  ]
+}<button class="btn-copy" onclick="copyText('json-users')">Copy</button></div>
+        </div>
+      </div>
+
+      <!-- Endpoint 4 -->
+      <div class="endpoint-card">
+        <div class="endpoint-header">
+          <span class="method-badge post">POST</span>
+          <span class="endpoint-path">/users</span>
+          <span class="endpoint-desc">Create and persist a new user item</span>
+        </div>
+        <div class="endpoint-details">
+          <div class="sub-section-title">Request Body (JSON)</div>
+          <div class="code-block" id="json-post-body">{
+  "name": "Alice Cooper",
+  "email": "alice@example.com"
+}<button class="btn-copy" onclick="copyText('json-post-body')">Copy</button></div>
+
+          <div class="divider"></div>
+
+          <div class="sub-section-title">Success Response (201 Created)</div>
+          <div class="code-block" id="json-post-success">{
+  "message": "User created successfully",
+  "user": {
+    "id": "3",
+    "name": "Alice Cooper",
+    "email": "alice@example.com"
+  }
+}<button class="btn-copy" onclick="copyText('json-post-success')">Copy</button></div>
+
+          <div class="divider"></div>
+
+          <div class="sub-section-title">Error Response (400 Bad Request)</div>
+          <div class="code-block" id="json-post-error">{
+  "error": "Name and email are required"
+}<button class="btn-copy" onclick="copyText('json-post-error')">Copy</button></div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-container">
+      <div class="footer-links">
+        <a href="index.html" class="footer-link">Dashboard</a>
+        <a href="setup.html" class="footer-link">Setup</a>
+        <a href="architecture.html" class="footer-link">Architecture</a>
+        <a href="api-spec.html" class="footer-link">API Spec</a>
+        <a href="deployment.html" class="footer-link">Deployment</a>
+      </div>
+      <p>&copy; 2026 Vikas Kumar. Project documentation page.</p>
+    </div>
+  </footer>
+
+  <script>
+    function copyText(elemId) {
+      const codeElem = document.getElementById(elemId);
+      let text = codeElem.innerText || codeElem.textContent;
+      if (text.includes('Copy')) {
+        text = text.replace('Copy', '').trim();
+      }
+      navigator.clipboard.writeText(text).then(() => {
+        const copyBtn = codeElem.querySelector('.btn-copy');
+        const original = copyBtn.textContent;
+        copyBtn.textContent = 'Copied!';
+        copyBtn.style.background = 'var(--success)';
+        copyBtn.style.color = '#020617';
+        setTimeout(() => {
+          copyBtn.textContent = original;
+          copyBtn.style.background = '';
+          copyBtn.style.color = '';
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>
