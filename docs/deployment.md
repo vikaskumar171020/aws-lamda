@@ -53,7 +53,8 @@ A GitHub Actions workflow has been configured at [.github/workflows/ci.yml](file
   5. **Artifact Archiving**: Zips the compiled build folder (`.aws-sam/`), `template.yaml`, and the updated `package.json` into `aws-v{version}.zip`.
   6. **Upload Artifact**: Attaches the zip as a run artifact named `aws-v{version}` (e.g., `aws-v1.0.1`) to the GitHub Actions run.
   7. **Transactional Deploy & Auto-Rollback**: Deploys the application using `sam deploy`. If the deployment fails for any reason (e.g., syntax errors, network errors, AWS validation failures), AWS CloudFormation natively triggers a transactional rollback, returning all resources back to the state of the **last successful deployment**.
-  8. **Create GitHub Release**: Creates a new GitHub Release tagged with the version (e.g., `aws-v1.0.1`) and attaches the `aws-v{version}.zip` package as a release asset.
+  8. **S3 Storage Cleanup**: Dynamically queries the AWS SAM source S3 bucket and automatically deletes all temporary uploaded build objects from the bucket to save storage costs.
+  9. **Create GitHub Release**: Creates a new GitHub Release tagged with the version (e.g., `aws-v1.0.1`) and attaches the `aws-v{version}.zip` package as a release asset.
 ---
 
 ## AWS OIDC Configuration (GitHub Actions Integration)
